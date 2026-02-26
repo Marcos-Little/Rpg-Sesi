@@ -23,7 +23,13 @@ btnLogin.addEventListener("click", async () => {
     if (Array.isArray(dados) && dados.length > 0) {
       localStorage.setItem("alunoLogado", JSON.stringify(dados[0]));
       localStorage.removeItem("professorLogado");
-      window.location.href = "personagem.html";
+
+      // 👉 NOVA REGRA: se não criou personagem, vai pra criação
+      if (!dados[0].personagemCriado) {
+        window.location.href = "criar-personagem.html";
+      } else {
+        window.location.href = "personagem.html";
+      }
       return;
     }
 

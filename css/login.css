@@ -47,3 +47,55 @@ body {
   color: #f87171;
   margin-top: 10px;
 }
+
+/* 📱 MODO MOBILE */
+@media (max-width: 768px) {
+
+  body {
+    padding: 16px;
+    height: auto; /* evita bug de altura no mobile */
+    min-height: 100vh;
+  }
+
+  .login-container {
+    width: 100%;
+    max-width: 360px;
+    padding: 24px 16px;
+    border-radius: 14px;
+  }
+
+  .login-container h1 {
+    font-size: 20px;
+  }
+
+  .login-container input {
+    width: 90%;
+    padding: 14px;
+    font-size: 16px; /* evita zoom no iOS */
+  }
+
+  .login-container button {
+    width: 70%;
+    padding: 14px;
+    font-size: 16px;
+  }
+
+  .erro {
+    font-size: 14px;
+    margin-top: 8px;
+  }
+}
+
+/* 📱📱 TELAS MUITO PEQUENAS */
+@media (max-width: 420px) {
+
+  .login-container {
+    padding: 20px 14px;
+  }
+
+  .login-container h1 {
+    font-size: 18px;
+  }
+
+}
+

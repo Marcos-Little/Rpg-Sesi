@@ -4,42 +4,67 @@ const listaAlunos = document.getElementById("listaAlunos");
 const btnDarXpTodos = document.getElementById("btnDarXpTodos");
 const btnTirarHpTodos = document.getElementById("btnTirarHpTodos");
 
+const XP_PARA_PROXIMO_LEVEL = 100;
+
 async function buscarAlunos() {
   const res = await fetch(`${API_URL}/alunos`);
   const alunos = await res.json();
   renderizarAlunos(alunos);
 }
 
-function calcularLevel(xp) {
-  return Math.floor(xp / 100) + 1;
+function aplicarLevelUp(aluno, xpNovo) {
+  let xp = xpNovo ?? 0;
+  let level = aluno.level ?? 1;
+
+  if (xp >= XP_PARA_PROXIMO_LEVEL) {
+    const levelsGanhados = Math.floor(xp / XP_PARA_PROXIMO_LEVEL);
+    level += levelsGanhados;
+    xp = xp % XP_PARA_PROXIMO_LEVEL;
+  }
+
+  return { xp, level };
 }
 
 function renderizarAlunos(alunos) {
   listaAlunos.innerHTML = "";
 
   alunos.forEach(aluno => {
+    const hp = aluno.hp ?? 100;
+    const xp = aluno.xp ?? 0;
+    const level = aluno.level ?? 1;
+
     const div = document.createElement("div");
     div.className = "card";
 
     div.innerHTML = `
-      <img src="${aluno.avatar || "https://api.dicebear.com/7.x/adventurer/svg?seed=" + aluno.usuario}" />
-      <h3>${aluno.nome}</h3>
-      <div class="status">❤️ HP: ${aluno.hp ?? 100}</div>
-      <div class="status">⭐ XP: ${aluno.xp ?? 0}</div>
-      <div class="status">🔼 Level: ${aluno.level ?? 1}</div>
+  <img 
+    src="${aluno.avatar}"
+    class="avatar"
+    title="Ver personagem"
+  />
+  <h3>${aluno.nome}</h3>
+  <div class="status">❤️ HP: ${hp}</div>
+  <div class="status">⭐ XP: ${xp}/100</div>
+  <div class="status">🔼 Level: ${level}</div>
 
-      <div class="acoes">
-        <button class="btn-xp">+10 XP</button>
-        <button class="btn-hp">-10 HP</button>
-      </div>
-    `;
+  <div class="acoes">
+    <button class="btn-xp">+10 XP</button>
+    <button class="btn-hp">-10 HP</button>
+  </div>
+`;
+    div.querySelector(".avatar").addEventListener("click", () => {
+      localStorage.setItem("alunoSelecionado", JSON.stringify(aluno));
+      window.location.href = "personagem-full.html";
+    });
 
     div.querySelector(".btn-xp").addEventListener("click", () => {
-      atualizarAluno(aluno, { xp: (aluno.xp ?? 0) + 10 });
+      const novoXpBruto = xp + 10;
+      const { xp: xpFinal, level: levelFinal } = aplicarLevelUp(aluno, novoXpBruto);
+      atualizarAluno(aluno, { xp: xpFinal, level: levelFinal });
     });
 
     div.querySelector(".btn-hp").addEventListener("click", () => {
-      atualizarAluno(aluno, { hp: Math.max(0, (aluno.hp ?? 100) - 10) });
+      atualizarAluno(aluno, { hp: Math.max(0, hp - 10) });
     });
 
     listaAlunos.appendChild(div);
@@ -47,13 +72,9 @@ function renderizarAlunos(alunos) {
 }
 
 async function atualizarAluno(aluno, changes) {
-  const novoXp = changes.xp !== undefined ? changes.xp : aluno.xp ?? 0;
-  const novoLevel = calcularLevel(novoXp);
-
   const body = {
     ...aluno,
-    ...changes,
-    level: novoLevel
+    ...changes
   };
 
   await fetch(`${API_URL}/alunos/${aluno.id}`, {
@@ -65,7 +86,7 @@ async function atualizarAluno(aluno, changes) {
   buscarAlunos();
 }
 
-// Ações em massa
+// 🔥 Ações em massa
 btnDarXpTodos.addEventListener("click", async () => {
   const valor = Number(document.getElementById("valorXp").value || 0);
   if (valor <= 0) return alert("Informe um valor de XP válido!");
@@ -74,14 +95,19 @@ btnDarXpTodos.addEventListener("click", async () => {
   const alunos = await res.json();
 
   await Promise.all(alunos.map(aluno => {
-    const novoXp = (aluno.xp ?? 0) + valor;
+    const xpAtual = aluno.xp ?? 0;
+    const levelAtual = aluno.level ?? 1;
+
+    const { xp: xpFinal, level: levelFinal } =
+      aplicarLevelUp(aluno, xpAtual + valor);
+
     return fetch(`${API_URL}/alunos/${aluno.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...aluno,
-        xp: novoXp,
-        level: calcularLevel(novoXp)
+        xp: xpFinal,
+        level: levelFinal
       })
     });
   }));
@@ -98,6 +124,7 @@ btnTirarHpTodos.addEventListener("click", async () => {
 
   await Promise.all(alunos.map(aluno => {
     const novoHp = Math.max(0, (aluno.hp ?? 100) - valor);
+
     return fetch(`${API_URL}/alunos/${aluno.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
